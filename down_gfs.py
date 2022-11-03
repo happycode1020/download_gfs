@@ -80,11 +80,15 @@ def down_load(file,outdir):
 		req = requests.get(file, allow_redirects=True, stream=True)
 		filesize = int(req.headers['Content-length'])
 		while filesize_down != filesize:
-			os.remove(file_down)
-			os.system(cmd)
-			filesize_down = os.path.getsize(file_down)
+			if filesize_down < filesize: # 自动断点下载
+				os.system(cmd)
+				filesize_down = os.path.getsize(file_down)
+			else:
+				os.remove(file_down) # 删除文件，重新下载
+				os.system(cmd)
+				filesize_down = os.path.getsize(file_down)
 			num = num+1
-			if num > 5:
+			if num > 3:
 				break
 	except Exception as e:
 		if filesize_down > 464050933:
@@ -95,7 +99,7 @@ def down_load(file,outdir):
 				os.system(cmd)
 				filesize_down = os.path.getsize(file_down)
 				num = num+1
-				if num > 5:
+				if num > 3:
 					break
 
 def check_file_complete(file_list,outdir):
@@ -109,7 +113,6 @@ def check_file_complete(file_list,outdir):
 
 def main(thistime,htime,beforedays,thour,tdelta,outpath):
 	'''主程序'''
-
 	file_path = get_file_path(thistime,htime,thour,tdelta)
 	before_file_path = befor_down_file(beforedays, htime,thistime)
 	t_file_path = []
@@ -118,17 +121,17 @@ def main(thistime,htime,beforedays,thour,tdelta,outpath):
 	outdir = outpath+'/'+thistime+'/'+htime+'/atmos'
 	checkdir(outdir)
 	outdir_list = [outdir]*len(t_file_path)
-	with ThreadPoolExecutor(max_workers=52) as executer:
+	with ThreadPoolExecutor(max_workers=24) as executer:
 # 		all_work = {executer.submit(down_load, file,outdir): file for file in file_path}
 		all_work = executer.map(down_load,t_file_path,outdir_list)
-		# for future in as_completed(all_work):
-		# 	work = all_work[future]
-		# 	try:
-		# 		data = future.result()
-		# 	except Exception as e:
-		# 		print('%r generated an exception: %s' % (work, e))
-		# 	else:
-		# 		print(data,future)
+		for future in as_completed(all_work):
+			work = all_work[future]
+			try:
+				data = future.result()
+			except Exception as e:
+				print('%r generated an exception: %s' % (work, e))
+			else:
+				print(data,future)
 		# check_file_complete(t_file_path,outdir)
 
 def main_process(thistime,htime,beforedays,thour,tdelta,outpath):
@@ -161,5 +164,5 @@ if __name__ == '__main__':
 	thour = 216
 	tdelta = 6
 	outpath = '/disk_tiger/Sunchao'
-	main_process(thistime,htime,beforedays,thour,tdelta,outpath)
+	main(thistime,htime,beforedays,thour,tdelta,outpath)
 	
