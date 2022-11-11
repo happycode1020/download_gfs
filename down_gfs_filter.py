@@ -7,6 +7,7 @@ Created on Thu Sep  1 09:25:44 2022
 import os
 from datetime import datetime,timedelta
 from concurrent.futures import ThreadPoolExecutor,as_completed
+import pygrib as pg
 
 down_var = ['4LFTX','ABSV','ACPCP','ALBDO','APCP','CAPE','CICEP','CIN','CLWMR','CNWAT',
 			'CRAIN','CSNOW','CWORK','DLWRF','DSWRF','DZDT','FLDCP','FRICV','GFLUX',
@@ -27,6 +28,19 @@ def domain_down(leftlon=70,rigthlon=150,toplat=80,bottomlat=-10):
 				  'toplat':toplat,'bottomlat':bottomlat}
 	return domain
 
+def read_grib(gribFile):
+	'''
+	purpose:基于pygrib库检查变量是否在文件中
+	'''
+	try:
+		grbs = pg.open(gribFile)# 所有变量
+		lastMes = str(list(grbs)[-1])
+		if 'Vertical speed shear' in lastMes and 'potentialVorticity' in lastMes and '2.147485648' in lastMes:
+			return 0
+	except Exception as e:
+		print(e)
+		return 1
+	return 1
 
 def down_file(thisTime,htime,thour,tdelta):
 	'''
@@ -59,23 +73,22 @@ def before_down_file(beforedays,htime,thisTime):
 
 def check_down(webfile,file_down,cmd):
 	'''
-	purpose:检查文件是否存在及下载
+	purpose:检查文件是否存在及下载完成
 	'''
 	if not os.path.exists(file_down):
 		os.system(cmd)
-		filesize_down = os.path.getsize(file_down)
+		isKey = read_grib(file_down)
 	else:
 		print(file_down + ' exists')
-		filesize_down = os.path.getsize(file_down)
+		isKey = read_grib(file_down)
 	# 判断下载的文件是否完成
-	filesize = 100000000
 	num = 0
-	while filesize_down < filesize:
+	while isKey == 1:
 		os.remove(file_down)
 		os.system(cmd)
-		filesize_down = os.path.getsize(file_down)
+		isKey = read_grib(file_down)
 		num = num+1
-		if num > 3:
+		if num > 5:
 			break
 
 def down(webfile,outdir):
@@ -87,7 +100,7 @@ def down(webfile,outdir):
 	HH = webfile.split('&')[0][-3:]
 	fileName = 'gfs.t{htime}z.pgrb2.0p25.f{thisTime}-{HH}'.format(htime=htime,
 							   thisTime=thisTime,HH=HH)
-	cmd = '''wget  --no-check-certificate -c --timeout=100 --retry-connrefused --tries=3 --limit-rate=100k "%s" -O %s/%s '''%(webfile,outdir,fileName)
+	cmd = '''wget  --no-check-certificate -c --timeout=100 --retry-connrefused --tries=300 --limit-rate=100k "%s" -O %s/%s '''%(webfile,outdir,fileName)
 	file_down = outdir+'/'+fileName
 	check_down(webfile,file_down, cmd)
 
