@@ -16,17 +16,12 @@ down_var = ['4LFTX','ABSV','ACPCP','ALBDO','APCP','CAPE','CICEP','CIN','CLWMR','
 			'RH','RWMR','SFCR','SNMR','SOTYP','SPFH','SUNSD','TCDC','TMP','TOZNE',
 			'UGRD','ULWRF','USWRF','VEG','VGRD','VIS','VRATE','VVEL','VWSH','WILT']
 
+domain = {'leftlon':55,'rightlon':160,
+				  'toplat':60,'bottomlat':5}
+
 def checkdir(path):
 	if not os.path.exists(path):
 		os.makedirs(path)
-
-def domain_down(leftlon=70,rigthlon=150,toplat=80,bottomlat=-10):
-	'''
-	purpose:模拟区域经纬度设置
-	'''
-	domain = {'leftlon':leftlon,'rightlon':rigthlon,
-				  'toplat':toplat,'bottomlat':bottomlat}
-	return domain
 
 def read_grib(gribFile):
 	'''
@@ -49,7 +44,6 @@ def down_file(thisTime,htime,thour,tdelta):
 	URL = 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25_1hr.pl?file='
 	gfsName = 'gfs.t{htime}z.pgrb2.0p25.f{HH}'
 	filePath = []
-	domain = domain_down(leftlon=70,rigthlon=150,toplat=80,bottomlat=-10)
 	for i in range(0,thour,tdelta):
 		HH = str(i).zfill(3)
 		webPath = URL+gfsName.format(htime=htime,HH = HH)+'&all_lev=on&all_var=on&subregion=&leftlon={leftlon}\
